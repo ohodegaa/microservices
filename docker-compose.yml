@@ -1,0 +1,22 @@
+version: "3"
+
+services:
+
+  webapp:
+    build: webapp
+    ports:
+      - 4000:4000
+
+  api:
+    build: api
+    ports:
+      - 4001:4000
+
+  proxy:
+    build: proxy
+    ports:
+      - 8080:6060
+
+    depends_on:
+      - webapp
+      - api
