@@ -24,9 +24,12 @@ class Addresses extends React.Component {
     }
 
     componentDidMount() {
-        fetch(addressesUrl)
+        fetch(addressesUrl, {
+            method: "get",
+        })
             .then(results => {
                 try {
+                    console.log(results);
                     return results.json();
                 } catch (e) {
                     console.log("error")

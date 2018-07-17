@@ -1,22 +1,43 @@
 version: "3"
 
+
 services:
 
   webapp:
     build: webapp
-    ports:
-      - 4000:4000
+    networks:
+      - closed_microservices
+    env_file:
+      - .env
 
   api:
     build: api
-    ports:
-      - 4001:4000
+    networks:
+      - closed_microservices
+    env_file:
+      - .env
 
   proxy:
     build: proxy
     ports:
-      - 8080:6060
-
+      - 8080:8080
+    networks:
+      - closed_microservices
     depends_on:
       - webapp
       - api
+    env_file:
+      - .env
+
+  auth:
+    build: auth
+    ports:
+      - 4040:4040
+    networks:
+      - closed_microservices
+    env_file:
+      - .env
+
+networks:
+  closed_microservices:
+    driver: bridge

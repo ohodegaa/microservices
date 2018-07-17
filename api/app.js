@@ -29,50 +29,11 @@ app.use((req, res, next) => {
         "Origin, X-Requested-With, Content-Type, Accept, Authorization"
     );
     if (req.method === "OPTIONS") {
-        res.header("Access-Control-Allow-Methods", "GET, PUT, POST, PATCH, DELETE")
+        res.header("Access-Control-Allow-Methods", "GET, PUT, POST, PATCH, DELETE");
         return res.status(200).json({});
     }
     next();
 });
-/*
-app.get("/api", (req, res) => {
-    res.json({
-        message: "welcome to my api",
-    })
-})
-
-app.post("/api/posts", verifyToken, (req, res) => {
-    res.json({
-        message: "Post created..."
-    })
-})
-
-
-app.post("/api/login", (req, res) => {
-
-    const user = {
-        id: 1,
-        username: "test",
-        email: "ole@hakon.no",
-    }
-
-    jwt.sign({user}, "secretkey", (err, token) => {
-        res.json({
-            token
-        })
-    });
-})
-
-
-function verifyToken(req, res, next) {
-    const bearerHeader = req.headers["Authorization"];
-    if (typeof bearerHeader !== "undefined") {
-        const bearer = bearerHeader.split(" ")[1];
-    } else {
-        res.sendStatus(403);
-    }
-}
-*/
 
 app.use("/api/addresses", addressRoutes);
 
