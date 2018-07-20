@@ -26,13 +26,12 @@ services:
     depends_on:
       - webapp
       - api
+      - auth
     env_file:
       - .env
 
   auth:
     build: auth
-    ports:
-      - 4040:4040
     networks:
       - closed_microservices
     env_file:

@@ -1,26 +1,31 @@
 const express = require("express");
 const router = express.Router(express);
 const mongoose = require("mongoose");
-const Address = require("../models/address");
+const User = require("../models/Users/user");
+
+const {permit, getGroups} = require("../utils/authorization");
 
 
+router.use(getGroups);
 
 
-router.get("/", (req, res, next) => {
-    Address.find({})
+router.get("/", permit("admin", "employees"), (req, res, next) => {
+    console.log("Groups: " + req.groups);
+    const query = {username, name, email} = req.query;
+    console.log(query);
+    User.find()
+        .select("_id username groups")
+        .populate("groups", "_id name")
         .limit(100)
         .exec()
         .then(docs => {
-            const keys = Object.keys(JSON.parse(JSON.stringify(docs[0])));
             let response = {
                 count: docs.length,
-                headers: keys,
-                addresses: docs,
+                users: docs,
             };
             res.status(200).json(response);
         })
         .catch(err => {
-            console.log(err);
             res.status(500).json({
                 error: err,
             })
@@ -28,24 +33,22 @@ router.get("/", (req, res, next) => {
 })
 
 
-router.post("/", (req, res, next) => {
-    const address = new Address({
+router.post("/", permit("employees"), (req, res, next) => {
+    const user = new User({
         _id: new mongoose.Types.ObjectId(),
-        TYPE: req.body.type,
-        KOMMUNENR: req.body.kommunenr,
-        ADRESSEKODE: req.body.adressekode,
-        ADRESSENAVN: req.body.adressenavn,
+        username: req.body.username,
+        name: req.body.name,
+        email: req.body.email,
+        groups: req.body.groups,
     });
-    address.save()
+    user.save()
         .then(result => {
-            console.log(result);
             res.status(200).json({
-                message: "Created address successfully",
-                createdAddress: address,
+                message: "Created User successfully",
+                createdUser: user,
             })
         })
         .catch(err => {
-            console.log(err);
             res.status(500).json({
                 error: err,
             })
@@ -53,12 +56,11 @@ router.post("/", (req, res, next) => {
 })
 
 
-router.get("/:addressId", (req, res, next) => {
-    const id = req.params.addressId;
-    Address.findOne({ADRESSEID: id})
+router.get("/:userId", (req, res, next) => {
+    const id = req.params.userId;
+    User.findOne({_id: id})
         .exec()
         .then(doc => {
-            console.log(doc);
             if (doc) {
                 res.status(200).json(doc);
             } else {
@@ -73,20 +75,18 @@ router.get("/:addressId", (req, res, next) => {
         })
 })
 
-router.patch("/:addressId", (req, res, next) => {
-    const id = req.params.addressId;
+router.patch("/:userId", (req, res, next) => {
+    const id = req.params.userId;
     const updateOps = {}
     for (const ops of req.body) {
-        updateOps[ops.name.toUpperCase()] = ops.value;
+        updateOps[ops.name] = ops.value;
     }
-    Address.update({_id: id}, { $set: updateOps})
+    User.update({_id: id}, {$set: updateOps})
         .exec()
         .then(result => {
-            console.log(result);
             res.status(200).json(result);
         })
         .catch(err => {
-            console.log(err);
             res.status(500).json({
                 error: err,
             })
@@ -95,15 +95,14 @@ router.patch("/:addressId", (req, res, next) => {
 });
 
 
-router.delete("/:addressId", (req, res, next) => {
-    const id = req.params.addressId;
-    Address.remove({_id: id})
+router.delete("/:userId", (req, res, next) => {
+    const id = req.params.userId;
+    User.remove({_id: id})
         .exec()
         .then(result => {
             res.status(200).json(result);
         })
         .catch(err => {
-            console.log(err);
             res.status(500).json({
                 error: err,
             })
