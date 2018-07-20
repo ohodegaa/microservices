@@ -4,6 +4,8 @@ const mongoose = require("mongoose");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const User = require("../db/user");
+const Group = require("../db/group");
+
 
 router.get("/me", (req, res) => {
     // uses a promise to better error handling and response to client
@@ -22,7 +24,6 @@ router.get("/me", (req, res) => {
             return jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
                 // adding a custom error, for preventing 500 status code
                 if (err) {
-                    console.log(err);
                     throw {
                         status: 401,
                         message: "Not a valid token. Please provide a valid token"
@@ -46,12 +47,24 @@ router.get("/me", (req, res) => {
                     message: "No user found for given token"
                 }
             }
+
+            return Group.find({
+                _id: {
+                    $in: user.groups
+                }
+            })
+                .select("name")
+                .exec()
+        })
+        .then(groups => {
+            let groupNames = groups.map(group => group.name).join(" ");
             // sets header for further authorization on api
-            res.set("x-user", user._id);
+            console.log("User authenticated");
+            res.set("x-groups", groupNames);
             res.status(200).send({
                 auth: true,
-                user
             });
+
         })
         .catch(err => {
             // catches all errors (all errors regarding authentication is considered as 401 status codes)

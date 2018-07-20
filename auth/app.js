@@ -19,9 +19,8 @@ mongoose.connect(
     );
 
 
-console.log(process.env.MONGO_ATLAS_PW);
-app.use(bodyParser.urlencoded({extended: false}));
 app.use(bodyParser.json());
+
 
 
 // for preventing CORS errors

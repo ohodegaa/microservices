@@ -20,7 +20,6 @@ mongoose.connect(
 
 
 app.use(morgan("dev"));
-app.use(bodyParser.urlencoded({extended: false}));
 app.use(bodyParser.json());
 
 
@@ -41,7 +40,6 @@ app.use((req, res, next) => {
 app.use("/api/addresses", addressRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/groups", groupRoutes);
-
 
 // not found error (404)
 app.use((req, res, next) => {

@@ -4,10 +4,8 @@ const mongoose = require("mongoose");
 const Group = require("../models/Users/group");
 
 
-
-
 router.get("/", (req, res, next) => {
-    const query =  {name, id} = req.query;
+    const query = {name, id} = req.query;
     Group.find(query)
         .exec()
         .then(docs => {
@@ -30,30 +28,34 @@ router.post("/", (req, res, next) => {
         .exec()
         .then(groups => {
             if (groups.length > 0) {
-                return res.status(400).json({
-                    error: "Already a group named " + req.body.name,
-                })
+                throw {
+                    status: 400,
+                    message: "Already a group with that name"
+                }
             } else {
                 const group = new Group({
                     _id: new mongoose.Types.ObjectId(),
                     name: req.body.name,
                 });
-                group.save()
-                    .then(result => {
-                        res.status(200).json({
-                            message: "Created group successfully",
-                            createdGroup: group,
-                        })
-                    })
-                    .catch(err => {
-                        res.status(500).json({
-                            error: err,
-                        })
-                    });
+                return group.save()
             }
         })
+        .then(group => {
+            res.status(200).json({
+                message: "Created group successfully",
+                createdGroup: group,
+            })
+        })
+        .catch(err => {
+            res.status(err.status || 500).json({
+                error: {
+                    message: "Could not create group",
+                    description: err.message || err,
+                }
+            })
+        });
 
-})
+});
 
 
 router.get("/:groupId", (req, res, next) => {
@@ -80,7 +82,7 @@ router.patch("/:groupId", (req, res, next) => {
     for (const ops of req.body) {
         updateOps[ops.name] = ops.value;
     }
-    Group.update({_id: id}, { $set: updateOps})
+    Group.update({_id: id}, {$set: updateOps})
         .exec()
         .then(result => {
             res.status(200).json(result);

@@ -1,18 +1,14 @@
 const express = require("express");
 const router = express.Router(express);
 const mongoose = require("mongoose");
+const jwt = require("jsonwebtoken");
+const bcrypt = require("bcryptjs");
 const User = require("../models/Users/user");
 
-const {permit, getGroups} = require("../utils/authorization");
-
-
-router.use(getGroups);
+const { permit } = require("../utils/authorization");
 
 
 router.get("/", permit("admin", "employees"), (req, res, next) => {
-    console.log("Groups: " + req.groups);
-    const query = {username, name, email} = req.query;
-    console.log(query);
     User.find()
         .select("_id username groups")
         .populate("groups", "_id name")
@@ -33,26 +29,45 @@ router.get("/", permit("admin", "employees"), (req, res, next) => {
 })
 
 
-router.post("/", permit("employees"), (req, res, next) => {
-    const user = new User({
-        _id: new mongoose.Types.ObjectId(),
-        username: req.body.username,
-        name: req.body.name,
-        email: req.body.email,
-        groups: req.body.groups,
-    });
-    user.save()
-        .then(result => {
-            res.status(200).json({
-                message: "Created User successfully",
-                createdUser: user,
-            })
+router.post("/", (req, res, next) => {
+    User.find({$or: [{email: req.body.email}, {username: req.body.username}]})
+        .exec()
+        .then(users => {
+            if (users.length <= 0) {
+                return bcrypt.hash(req.body.password, 8)
+            } else {
+                throw {
+                    status: 400,
+                    message: "A user has already been registered with that username and/or email. Please try another username/email",
+                };
+            }
+        })
+        .then(hash => {
+            const user = new User({
+                _id: new mongoose.Types.ObjectId(),
+                username: req.body.username,
+                password: hash,
+                name: req.body.name,
+                email: req.body.email,
+                groups: req.body.groups,
+            });
+            return user.save();
+        })
+        .then(savedUser => {
+            let token = jwt.sign({id: savedUser._id}, process.env.JWT_SECRET);
+            res.status(201).send({
+                user: savedUser.getSafe(),      // prevents returning i.e. password field
+                token
+            });
         })
         .catch(err => {
-            res.status(500).json({
-                error: err,
+            return res.status(err.status || 500).json({
+                error: {
+                    message: "Error creating new user",
+                    description: err.message || err,
+                }
             })
-        });
+        })
 })
 
 
@@ -68,7 +83,6 @@ router.get("/:userId", (req, res, next) => {
             }
         })
         .catch(err => {
-            console.log(err);
             res.status(500).json({
                 error: err,
             })
