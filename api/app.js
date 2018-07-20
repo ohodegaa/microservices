@@ -2,10 +2,13 @@ const express = require("express");
 const morgan = require("morgan");
 const bodyParser = require("body-parser");
 const mongoose = require("mongoose");
-const jwt = require("jsonwebtoken");
 
 
 const addressRoutes = require("./routes/adresses");
+const userRoutes = require("./routes/users");
+const groupRoutes = require("./routes/groups");
+
+const getGroup = require("./utils/authorization");
 
 const app = express();
 
@@ -26,7 +29,7 @@ app.use((req, res, next) => {
     res.header("Access-Control-Allow-Origin", "*");
     res.header(
         "Access-Control-Allow-Headers",
-        "Origin, X-Requested-With, Content-Type, Accept, Authorization"
+        "Origin, X-Requested-With, Content-Type, Accept, Authorization, X-User"
     );
     if (req.method === "OPTIONS") {
         res.header("Access-Control-Allow-Methods", "GET, PUT, POST, PATCH, DELETE");
@@ -36,6 +39,9 @@ app.use((req, res, next) => {
 });
 
 app.use("/api/addresses", addressRoutes);
+app.use("/api/users", userRoutes);
+app.use("/api/groups", groupRoutes);
+
 
 // not found error (404)
 app.use((req, res, next) => {
@@ -48,8 +54,9 @@ app.use((req, res, next) => {
 // handles all errors in our api
 app.use((err, req, res, next) => {
     res.status(err.status || 500);
+    console.log(err);
     res.json({
-        error: {
+        errorFinal: {
             message: err.message,
         }
     })

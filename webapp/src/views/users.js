@@ -11,7 +11,7 @@ import Paper from '@material-ui/core/Paper';
 import TextField from "@material-ui/core/TextField";
 import axios from "axios";
 
-class Addresses extends React.Component {
+class Users extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
@@ -24,7 +24,7 @@ class Addresses extends React.Component {
 
     componentDidMount() {
         let token = localStorage.getItem("token")
-        axios.get(window.API_URL + "/api/addresses", {
+        axios.get(window.API_URL + "/api/users", {
             headers: {
                 Authorization: "Bearer " + token
             }
@@ -34,37 +34,51 @@ class Addresses extends React.Component {
                     data: res.data
                 })
             })
+            .catch(err => {
+                if (err.response) {
+                    this.setState({
+                        error: true,
+                        message: err.response.data.message
+                    })
+                } else {
+                    this.setState({
+                        error: true,
+                        message: err.message,
+                    })
+                }
+            })
     }
 
     render() {
-        return (
-        this.state.data.headers ?
-            <div>
-                <TextField
-                    id="name"
-                    label="Search"
-                    placeholder="Search for an address"
-                    value={this.state.query}
-                    onChange={e => this.setState({query: e.target.value})}
-                    margin="normal"
-                />
 
+        console.log(this.state.data);
+        return (
+            this.state.data.users ?
+                <div>
+                    <TextField
+                        id="name"
+                        label="Search"
+                        placeholder="Search for an user"
+                        value={this.state.query}
+                        onChange={e => this.setState({query: e.target.value.toLowerCase()})}
+                        margin="normal"
+                    />
 
 
                     <Paper>
                         <Table>
                             <TableHead>
                                 <TableRow>
-                                    {this.state.data.headers.map((key, i) => {
+                                    {Object.keys(this.state.data.users[0]).map((key, i) => {
                                         return <TableCell key={i}>{key}</TableCell>
                                     })}
                                 </TableRow>
                             </TableHead>
                             <TableBody>
-                                {this.state.data.addresses.filter(address => address.ADRESSENAVN ? address.ADRESSENAVN.includes(this.state.query) : false).map(address => {
+                                {this.state.data.users.filter(user => user.name ? Object.values(user).some(el => el.toLowerCase().includes(this.state.query)) : false).map(user => {
                                     return (
-                                        <TableRow key={address._id}>
-                                            {Object.values(address).map((val, i) => {
+                                        <TableRow key={user._id}>
+                                            {Object.values(user).map((val, i) => {
                                                 return <TableCell key={i}>{val}</TableCell>
                                             })}
                                         </TableRow>
@@ -73,13 +87,13 @@ class Addresses extends React.Component {
                             </TableBody>
                         </Table>
                     </Paper>
-            </div>
-            :
-            <div>
-                No data available!
-            </div>
+                </div>
+                :
+                <div>
+                    <h3>{this.state.error ? this.state.message : "Something went wrong"}</h3>
+                </div>
         )
     }
 }
 
-export default Addresses;
+export default Users;
