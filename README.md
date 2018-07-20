@@ -10,16 +10,16 @@ Eksempelet består av 4 komponenter, der 2 av dem er (så og si) det som utgjør
 ## Proxy:
 Proxyen er en enkel nginx-server med følgende endepunkt:
 -	/auth: brukes for å autentisere en bruker som forsøker å aksessere et annet endepunkt (her: /api). Har også støtte for å registrere en bruker og logge inn en bruker
-o	/auth/me: autentiserer en bruker, ved at brukeren sender inn header Authorization med et Bearer token
-o	/auth/login: logger inne en bruker, som sender inn brukernavn/email og password og returnerer et Bearer token
-o	/auth/register: lager en ny bruker med navn, brukernavn, passord, email, osv. Bearer token blir returnert
+    -  	/auth/me: autentiserer en bruker, ved at brukeren sender inn header Authorization med et Bearer token
+    -  	/auth/login: logger inne en bruker, som sender inn brukernavn/email og password og returnerer et Bearer token
+    -	/auth/register: lager en ny bruker med navn, brukernavn, passord, email, osv. Bearer token blir returnert
 
 -	/api: brukes for å aksessere data som ligger lagret i databasen (users, groups, addresses)
-o	/api/addresses: henter ut data om adresser i Oppland
-o	/api/users: henter ut data om alle brukere som er registrert (brukes også for autentisering i auth-endepunktet)
-o	/api/groups: henter ut data om alle brukergrupper
+    -	/api/addresses: henter ut data om adresser i Oppland
+    -  	/api/users: henter ut data om alle brukere som er registrert (brukes også for autentisering i auth-endepunktet)
+    -	/api/groups: henter ut data om alle brukergrupper
 -	/: brukes for å aksessere serveren som webappen ligger på
-o	/addresses: visualiserer alle adresser i en tabell (krever innlogging og gyldig Bearer token for alle api-kall fra webapp)
+    -	/addresses: visualiserer alle adresser i en tabell (krever innlogging og gyldig Bearer token for alle api-kall fra webapp)
 
 Det som er fint med en proxy-server er at absolutt all trafikk til alle endepunkt i systemet går gjennom denne. Her kan man konfigurere autentisering til de endepunktene man ønsker, vha. auth_request til en service som tar seg av autentisering. Når denne returnerer 2.. -status er brukeren gitt tilgang.
 Auth-servicen legger til en header «x-user» som brukes for å autorisere brukeren i api-et. Her kan det være fornuftig å legge både autentisering og autorisering sammen med API-et, i og med at autoriseringen i API-et er avhengig av at headeren x-user blir satt i auth-servicen. Dette er kun for å vise litt hvordan man kan bruke en autoriserings-service sammen med nginx
