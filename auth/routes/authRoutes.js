@@ -6,88 +6,110 @@ const bcrypt = require("bcryptjs");
 const User = require("../db/user");
 
 router.get("/me", (req, res) => {
-    let bearerToken = req.headers["authorization"];
-    if (typeof bearerToken === "undefined") {
-        return res.status(401).send({
-            auth: false,
-            message: "No token provided",
-        });
-    }
-    let token = bearerToken.split(" ")[1];
-
-    if (!token) {
-        return res.status(401).send({
-            auth: false,
-            message: "No token provided",
-        });
-    }
-    jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
-        if (err) {
-            console.log("token error\n" + err);
-            return res.status(401).send({
-                auth: false,
-                message: "Failed to authenticate token.\n " + err,
-            })
+    // uses a promise to better error handling and response to client
+    new Promise((resolve) => {
+        let bearerToken = req.headers["authorization"];
+        if (typeof bearerToken === "undefined" || !bearerToken.split(" ")[1]) {
+            // no token is provided
+            throw {
+                status: 401,
+                message: "No token provided. Please provide a valid jwt token."
+            }
         }
-        User.findById(decoded.id)
-            .select("-password")
-            .exec((err, user) => {
-                if (err) {
-                    console.log("User error\n" + err);
-                    return res.status(401).send("There was a problem finding the user");
-                }
-                if (!user) {
-                    console.log("User not found\n");
-                    return res.status(401).send("No user found");
-                }
-                console.log("User " + user._id + " authorized...");
-                res.set("X-User", user._id);
-                res.status(200).send({
-                    auth: true,
-                    user
-                });
-            })
+        resolve(bearerToken.split(" ")[1]);
     })
-});
-
-router.post("/login", (req, res, next) => {
-
-    User.findOne({$or: [{username: req.body.username}, {email: req.body.email}]})
-        .exec()
+        .then(token => {
+            return jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+                // adding a custom error, for preventing 500 status code
+                if (err) {
+                    console.log(err);
+                    throw {
+                        status: 401,
+                        message: "Not a valid token. Please provide a valid token"
+                    }
+                }
+                return decoded;
+            })
+        })
+        .then(decoded => {
+            // finds user and deselects password for security reasons
+            return User.findById(decoded.id)
+            // .select("username email name ...")
+            // select/deselect fields which should be returned in response body
+                .exec()
+        })
         .then(user => {
             if (!user) {
-                res.status(404).send("No user found.");
+                // user not found
+                throw {
+                    status: 401,
+                    message: "No user found for given token"
+                }
             }
-            else return user;
+            // sets header for further authorization on api
+            res.set("x-user", user._id);
+            res.status(200).send({
+                auth: true,
+                user
+            });
         })
         .catch(err => {
-            console.log("error when fetching from db")
-            res.status(500).json({
+            // catches all errors (all errors regarding authentication is considered as 401 status codes)
+            res.status(err.status || 500).json({
                 error: {
-                    message: "Error occured when fetching the user from db",
-                    description: err,
+                    message: "Error authenticating the user",
+                    description: err.message || err,
                 }
             })
+        });
+})
+
+router.post("/login", (req, res) => {
+
+    User.findOne({$or: [{username: req.body.username}, {email: req.body.email}]})
+        .select("+password")
+        .exec()
+        .then(user => {
+            // check if user exist
+            if (!user) {
+                throw {
+                    status: 401,
+                    message: "No user found with username/email " + (req.body.username || req.body.email),
+                }
+            }
+            return user;
         })
         .then(user => {
-            let passwordIsValid = bcrypt.compareSync(req.body.password, user.password);
-            if (!passwordIsValid) {
-                console.log("Password not valid for username " + user.username);
-                res.status(401).json({
-                    auth: false,
-                    token: null,
-                    message: "Not a valid password",
+            // check if password is correct and return token
+            return bcrypt.compare(req.body.password, user.password)
+                .then(isValid => {
+                    if (!isValid) {
+                        throw {
+                            status: 401,
+                            message: "Password is incorrect. Please provide a valid password."
+                        }
+                    }
+                    return jwt.sign({id: user._id}, process.env.JWT_SECRET);
                 })
-            }
-            let token = jwt.sign({id: user._id}, process.env.JWT_SECRET);
-            console.log("User " + user._id + " logged in...")
+        })
+        .then(token => {
+            // send token
             res.status(200).send({auth: true, token});
+        })
+        .catch(err => {
+            res.status(err.status || 500).json({
+                error: {
+                    message: "Error logging in the user",   // basically which endpoint action that gave an error
+                    description: err.message || err,        // a description on what went wrong
+                }
+            });
         })
 
 });
 
 
 router.post("/register", (req, res) => {
+
 
     User.find({$or: [{email: req.body.email}, {username: req.body.username}]})
         .exec()
@@ -109,28 +131,21 @@ router.post("/register", (req, res) => {
                 name: req.body.name,
                 email: req.body.email,
                 groups: req.body.groups,
-            })
+            });
             return user.save();
         })
         .then(savedUser => {
-            let token = jwt.sign(
-                {id: savedUser._id},
-                process.env.JWT_SECRET,
-                {expiresIn: 86400}
-            );
-            return res.status(201).send({
-                created: true,
-                user: savedUser.getSafe(),
+            let token = jwt.sign({id: savedUser._id}, process.env.JWT_SECRET);
+            res.status(201).send({
+                user: savedUser.getSafe(),      // prevents returning i.e. password field
                 token
             });
         })
-        .then(obj => console.log(obj))
         .catch(err => {
-            console.log(err);
             return res.status(err.status || 500).json({
                 error: {
-                    message: "Error when creating new user",
-                    description: err.message || {...err},
+                    message: "Error creating new user",
+                    description: err.message || err,
                 }
             })
         })

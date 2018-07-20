@@ -30,7 +30,9 @@ Api-et er en enkel express server som aksepterere følgende endepunkt:
 -	/api/users: henter ut data om alle brukere som er registrert (brukes også for autentisering i auth-endepunktet)
 -	/api/groups: henter ut data om alle brukergrupper
 
-Her har jeg eksperimentert litt med både promises og middleware. En middelware som heter getGroups (kalles i routes/users.js) finner headeren «x-user», henter ut alle gruppene som brukeren er registrert med og setter en property «groups» i request-objektet. Her kan det oppstå problemer dersom x-user ikke er satt i auth-servicen og det kan være hensiktsmessig igjen å bake autentiseringen inn i api-servicen. På den annen side så ønsker man jo alltid autentisering før autorisering, men man er altså avhengig av at autentiserings-servicen er konfigurert i nginx ved endepunkt som krever autorisering.
+Her har jeg eksperimentert litt med både promises og middleware. En middelware som heter getGroups (kalles i routes/users.js) finner headeren «x-user», henter ut alle gruppene som brukeren er registrert med og setter en property «groups» i request-objektet. Her kan det oppstå problemer dersom x-user ikke er satt i auth-servicen og det kan være hensiktsmessig igjen å bake autentiseringen inn i api-servicen. På den annen side så ønsker man jo alltid autentisering før autorisering, men man er altså avhengig av at autentiserings-servicen er konfigurert i nginx ved endepunkt som krever autorisering og at disse to servicene er på samme bølgelengde.
+
+En middelware allow("group1", "group2", ...) settes inn i endepunkt for å kun tillate tilgang fra spesifiserte brukergrupper.
 
 ## Auth:
 En express-server som utelukkende håndterer autentisering. Den her settes en header x-user, med id til brukeren som er blitt autentisert og som kan brukes i API-et. Følgende endepunkt er implementert:
@@ -42,4 +44,13 @@ Det kan være tilfeller der man ønsker å skille autentiseringen av en bruker f
 
 
 
-Jeg har lært utrolig mye ved å jobbe med dette prosjektet og det er på ingen måte noe jeg ser på som en fasit, men kan gi en pekepin på hvilke muligheter det er når det kommer til microservices, nginx og express middleware.
+## Docker
+Docker spiller en stor rolle i dette oppsettet ved at det gir økt sikkerhet for hva som er eksponert public. Ved å plassere alle microservices i hver sin container kan de enkelt oppdateres og endres etter produksjon uten å måtte ta ned hele systemet.
+Alle containere kjører på samme nettverk og det er kun proxy-containeren som er eksponert public gjennom port 8080. Dette gjør at alle requests til systemet må gå gjennom denne proxyen og man hindrer dermed aksess direkte til api-et.
+
+
+## Videre arbeid
+Videre synes jeg man bør forsøke å integrere Swagger i API-et, slik at dokumentasjonen alltid holdes oppdatert på hva som finnes i kildekoden. Det bør installeres/lages en løsning som er slik at man slipper å skrive swagger-relatert kode i den eksisterende koden. En løsning som autogenererte swagger-definisjoner hadde vært fint, men vet ikke om dette finnes.
+
+Det bør også legges inn støtte for validering av requests. Det virker som dette er nokså enkelt, ved å bruke joi for å definere regler for valideringen og express-validation som middelware for å validere requestene.
+

@@ -8,7 +8,7 @@ const userSchema = mongoose.Schema({
     username: String,
     password: {
         type: String,
-        select: false,
+        select: false, // should be deselected by default for security
     },
     name: String,
     email: String,
